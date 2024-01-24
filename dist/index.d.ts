@@ -1,7 +1,8 @@
-import { IControl, Map as MapboxMap } from "mapbox-gl";
+import { IControl, Map as MapboxMap } from 'mapbox-gl';
 export declare type MapboxStyleDefinition = {
     title: string;
     uri: string;
+    imageSrc?: string;
 };
 export declare type MapboxStyleSwitcherOptions = {
     defaultStyle?: string;
