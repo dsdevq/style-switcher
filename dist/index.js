@@ -25,15 +25,17 @@ class MapboxStyleSwitcherControl {
                 : undefined;
     }
     changeTheme(map, url) {
-        return fetch(url)
-            .then((res) => res.json())
-            .then((newStyle) => {
-            const currentStyle = map.getStyle();
-            newStyle.sources = Object.assign({}, currentStyle.sources);
-            newStyle.layers = [...newStyle.layers, ...currentStyle.layers].filter((value, index, array) => {
-                return index === array.findIndex((v) => v.id === value.id);
+        return __awaiter(this, void 0, void 0, function* () {
+            return fetch(url)
+                .then((res) => res.json())
+                .then((newStyle) => {
+                const currentStyle = map.getStyle();
+                newStyle.sources = Object.assign({}, currentStyle.sources);
+                newStyle.layers = [...newStyle.layers, ...currentStyle.layers].filter((value, index, array) => {
+                    return index === array.findIndex((v) => v.id === value.id);
+                });
+                map.setStyle(newStyle);
             });
-            map.setStyle(newStyle);
         });
     }
     getDefaultPosition() {
@@ -48,43 +50,52 @@ class MapboxStyleSwitcherControl {
         this.styleButton = document.createElement('button');
         this.styleButton.type = 'button';
         this.mapStyleContainer.classList.add('mapboxgl-style-list');
-        for (const style of this.styles) {
+        for (const { imageSrc, activeImageScr, title, uri } of this.styles) {
             const styleElement = document.createElement('button');
-            if (style.imageSrc) {
+            if (imageSrc) {
                 const image = document.createElement('img');
-                image.src = style.imageSrc;
+                image.classList.add('icon');
+                image.src = imageSrc;
                 image.width = 20;
                 image.height = 20;
                 styleElement.appendChild(image);
             }
+            const icon = styleElement.querySelector('.icon');
             styleElement.type = 'button';
-            const title = document.createElement('span');
-            title.textContent = style.title;
-            styleElement.appendChild(title);
-            styleElement.classList.add(style.title.replace(/[^a-z0-9-]/gi, '_'));
+            const titleEl = document.createElement('span');
+            titleEl.textContent = title;
+            styleElement.appendChild(titleEl);
+            styleElement.classList.add(title.replace(/[^a-z0-9-]/gi, '_'));
             styleElement.addEventListener('click', (event) => __awaiter(this, void 0, void 0, function* () {
-                const srcElement = event.target;
                 this.closeModal();
-                if (srcElement.classList.contains('active')) {
+                if (styleElement.classList.contains('active')) {
                     return;
                 }
                 if (this.events && this.events.onOpen && this.events.onOpen(event)) {
                     return;
                 }
-                yield this.changeTheme(map, style.uri);
-                const elms = this.mapStyleContainer.getElementsByClassName('active');
-                while (elms[0]) {
-                    elms[0].classList.remove('active');
+                yield this.changeTheme(map, uri);
+                const el = this.mapStyleContainer.getElementsByClassName('active')[0];
+                if (el) {
+                    el.classList.remove('active');
+                    const elIcon = el.querySelector('.icon');
+                    const title = el.classList[0];
+                    const elImageSrc = this.styles.find((v) => v.title === title).imageSrc;
+                    elImageSrc && elIcon.setAttribute('src', elImageSrc);
                 }
-                srcElement.classList.add('active');
+                styleElement.classList.add('active');
+                if (activeImageScr) {
+                    icon.setAttribute('src', activeImageScr);
+                }
                 if (this.events &&
                     this.events.onChange &&
-                    this.events.onChange(event, style.uri)) {
+                    this.events.onChange(event, uri)) {
                     return;
                 }
             }));
-            if (style.title === this.defaultStyle) {
+            if (title === this.defaultStyle) {
                 styleElement.classList.add('active');
+                icon && activeImageScr && icon.setAttribute('src', activeImageScr);
             }
             this.mapStyleContainer.appendChild(styleElement);
         }

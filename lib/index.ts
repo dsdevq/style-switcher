@@ -1,6 +1,4 @@
-import { IControl, Map as MapboxMap } from 'mapbox-gl';
-
-import mapboxgl = require('mapbox-gl');
+import { ControlPosition, IControl, Map } from 'maplibre-gl';
 
 export type MapboxStyleDefinition = {
 	title: string;
@@ -32,7 +30,7 @@ export class MapboxStyleSwitcherControl implements IControl {
 
 	private controlContainer: HTMLElement | undefined;
 	private events?: MapboxStyleSwitcherEvents;
-	private map?: MapboxMap;
+	private map?: Map;
 	private mapStyleContainer: HTMLElement | undefined;
 	private styleButton: HTMLButtonElement | undefined;
 	private styles: MapboxStyleDefinition[];
@@ -58,9 +56,9 @@ export class MapboxStyleSwitcherControl implements IControl {
 				: undefined;
 	}
 
-	private async changeTheme(map: mapboxgl.Map, url: string): Promise<void> {
+	private async changeTheme(map: Map, url: string): Promise<void> {
 		return fetch(url)
-			.then((res) => res.json() as Promise<mapboxgl.Style>)
+			.then((res) => res.json() as Promise<maplibregl.StyleSpecification>)
 			.then((newStyle) => {
 				const currentStyle = map.getStyle();
 				newStyle.sources = { ...currentStyle.sources };
@@ -74,12 +72,12 @@ export class MapboxStyleSwitcherControl implements IControl {
 			});
 	}
 
-	public getDefaultPosition(): string {
+	public getDefaultPosition(): ControlPosition {
 		const defaultPosition = 'top-right';
 		return defaultPosition;
 	}
 
-	public onAdd(map: MapboxMap): HTMLElement {
+	public onAdd(map: Map): HTMLElement {
 		this.map = map;
 		this.controlContainer = document.createElement('div');
 		this.controlContainer.classList.add(
@@ -121,13 +119,20 @@ export class MapboxStyleSwitcherControl implements IControl {
 					return;
 				}
 				await this.changeTheme(map, uri);
-				const elms = this.mapStyleContainer!.getElementsByClassName('active');
-				while (elms[0]) {
-					elms[0].classList.remove('active');
-					imageSrc && icon.setAttribute('src', imageSrc);
+				const el = this.mapStyleContainer!.getElementsByClassName('active')[0];
+				if (el) {
+					el.classList.remove('active');
+					const elIcon = el.querySelector('.icon') as HTMLImageElement;
+					const title = el.classList[0];
+					const elImageSrc = this.styles.find(
+						(v) => v.title === title
+					)!.imageSrc;
+					elImageSrc && elIcon.setAttribute('src', elImageSrc);
 				}
 				styleElement.classList.add('active');
-				activeImageScr && icon.setAttribute('src', activeImageScr);
+				if (activeImageScr) {
+					icon.setAttribute('src', activeImageScr);
+				}
 				if (
 					this.events &&
 					this.events.onChange &&

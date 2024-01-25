@@ -1,8 +1,9 @@
-import { IControl, Map as MapboxMap } from 'mapbox-gl';
+import { ControlPosition, IControl, Map } from 'maplibre-gl';
 export declare type MapboxStyleDefinition = {
     title: string;
     uri: string;
     imageSrc?: string;
+    activeImageScr?: string;
 };
 export declare type MapboxStyleSwitcherOptions = {
     defaultStyle?: string;
@@ -25,8 +26,8 @@ export declare class MapboxStyleSwitcherControl implements IControl {
     private defaultStyle;
     constructor(styles?: MapboxStyleDefinition[], options?: MapboxStyleSwitcherOptions | string);
     private changeTheme;
-    getDefaultPosition(): string;
-    onAdd(map: MapboxMap): HTMLElement;
+    getDefaultPosition(): ControlPosition;
+    onAdd(map: Map): HTMLElement;
     onRemove(): void;
     private closeModal;
     private openModal;
