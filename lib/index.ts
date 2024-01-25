@@ -1,9 +1,12 @@
 import { IControl, Map as MapboxMap } from 'mapbox-gl';
 
+import mapboxgl = require('mapbox-gl');
+
 export type MapboxStyleDefinition = {
 	title: string;
 	uri: string;
 	imageSrc?: string;
+	activeImageScr?: string;
 };
 
 export type MapboxStyleSwitcherOptions = {
@@ -55,6 +58,22 @@ export class MapboxStyleSwitcherControl implements IControl {
 				: undefined;
 	}
 
+	private async changeTheme(map: mapboxgl.Map, url: string): Promise<void> {
+		return fetch(url)
+			.then((res) => res.json() as Promise<mapboxgl.Style>)
+			.then((newStyle) => {
+				const currentStyle = map.getStyle();
+				newStyle.sources = { ...currentStyle.sources };
+				newStyle.layers = [...newStyle.layers!, ...currentStyle.layers!].filter(
+					(value, index, array) => {
+						// Remove duplicated layers from currentStyle
+						return index === array.findIndex((v) => v.id === value.id);
+					}
+				);
+				map.setStyle(newStyle);
+			});
+	}
+
 	public getDefaultPosition(): string {
 		const defaultPosition = 'top-right';
 		return defaultPosition;
@@ -74,49 +93,52 @@ export class MapboxStyleSwitcherControl implements IControl {
 		this.styleButton = document.createElement('button');
 		this.styleButton.type = 'button';
 		this.mapStyleContainer.classList.add('mapboxgl-style-list');
-		for (const style of this.styles) {
+		for (const { imageSrc, activeImageScr, title, uri } of this.styles) {
 			const styleElement = document.createElement('button');
-			if (style.imageSrc) {
+			if (imageSrc) {
 				const image = document.createElement('img');
-				image.src = style.imageSrc;
+				image.classList.add('icon');
+				image.src = imageSrc;
 				image.width = 20;
 				image.height = 20;
 				styleElement.appendChild(image);
 			}
+
+			const icon = styleElement.querySelector('.icon') as HTMLImageElement;
+
 			styleElement.type = 'button';
 
-			const title = document.createElement('span');
-			title.textContent = style.title;
-			styleElement.appendChild(title);
-
-			styleElement.classList.add(style.title.replace(/[^a-z0-9-]/gi, '_'));
-			styleElement.dataset.uri = JSON.stringify(style.uri);
-			styleElement.addEventListener('click', (event) => {
-				const srcElement = event.srcElement as HTMLButtonElement;
+			const titleEl = document.createElement('span');
+			titleEl.textContent = title;
+			styleElement.appendChild(titleEl);
+			styleElement.classList.add(title.replace(/[^a-z0-9-]/gi, '_'));
+			styleElement.addEventListener('click', async (event) => {
 				this.closeModal();
-				if (srcElement.classList.contains('active')) {
+				if (styleElement.classList.contains('active')) {
 					return;
 				}
 				if (this.events && this.events.onOpen && this.events.onOpen(event)) {
 					return;
 				}
-				const style = JSON.parse(srcElement.dataset.uri!);
-				this.map!.setStyle(style);
+				await this.changeTheme(map, uri);
 				const elms = this.mapStyleContainer!.getElementsByClassName('active');
 				while (elms[0]) {
 					elms[0].classList.remove('active');
+					imageSrc && icon.setAttribute('src', imageSrc);
 				}
-				srcElement.classList.add('active');
+				styleElement.classList.add('active');
+				activeImageScr && icon.setAttribute('src', activeImageScr);
 				if (
 					this.events &&
 					this.events.onChange &&
-					this.events.onChange(event, style)
+					this.events.onChange(event, uri)
 				) {
 					return;
 				}
 			});
-			if (style.title === this.defaultStyle) {
+			if (title === this.defaultStyle) {
 				styleElement.classList.add('active');
+				icon && activeImageScr && icon.setAttribute('src', activeImageScr);
 			}
 			this.mapStyleContainer.appendChild(styleElement);
 		}

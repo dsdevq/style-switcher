@@ -1,4 +1,12 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 class MapboxStyleSwitcherControl {
     constructor(styles, options) {
@@ -15,6 +23,18 @@ class MapboxStyleSwitcherControl {
             typeof options !== 'string' && options
                 ? options.eventListeners
                 : undefined;
+    }
+    changeTheme(map, url) {
+        return fetch(url)
+            .then((res) => res.json())
+            .then((newStyle) => {
+            const currentStyle = map.getStyle();
+            newStyle.sources = Object.assign({}, currentStyle.sources);
+            newStyle.layers = [...newStyle.layers, ...currentStyle.layers].filter((value, index, array) => {
+                return index === array.findIndex((v) => v.id === value.id);
+            });
+            map.setStyle(newStyle);
+        });
     }
     getDefaultPosition() {
         const defaultPosition = 'top-right';
@@ -42,9 +62,8 @@ class MapboxStyleSwitcherControl {
             title.textContent = style.title;
             styleElement.appendChild(title);
             styleElement.classList.add(style.title.replace(/[^a-z0-9-]/gi, '_'));
-            styleElement.dataset.uri = JSON.stringify(style.uri);
-            styleElement.addEventListener('click', (event) => {
-                const srcElement = event.srcElement;
+            styleElement.addEventListener('click', (event) => __awaiter(this, void 0, void 0, function* () {
+                const srcElement = event.target;
                 this.closeModal();
                 if (srcElement.classList.contains('active')) {
                     return;
@@ -52,8 +71,7 @@ class MapboxStyleSwitcherControl {
                 if (this.events && this.events.onOpen && this.events.onOpen(event)) {
                     return;
                 }
-                const style = JSON.parse(srcElement.dataset.uri);
-                this.map.setStyle(style);
+                yield this.changeTheme(map, style.uri);
                 const elms = this.mapStyleContainer.getElementsByClassName('active');
                 while (elms[0]) {
                     elms[0].classList.remove('active');
@@ -61,10 +79,10 @@ class MapboxStyleSwitcherControl {
                 srcElement.classList.add('active');
                 if (this.events &&
                     this.events.onChange &&
-                    this.events.onChange(event, style)) {
+                    this.events.onChange(event, style.uri)) {
                     return;
                 }
-            });
+            }));
             if (style.title === this.defaultStyle) {
                 styleElement.classList.add('active');
             }
