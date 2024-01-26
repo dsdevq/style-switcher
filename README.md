@@ -1,4 +1,4 @@
-# Mapbox GL JS Style Switcher
+# Mapbox GL JS Style Switcher binding for Maplibre GL JS
 
 Adds a style switcher to `mapbox-gl`
 
@@ -8,7 +8,7 @@ Adds a style switcher to `mapbox-gl`
 ## Installation:
 
 ```bash
-npm i mapbox-gl-style-switcher --save
+npm i maplibre-gl-style-switcher
 ```
 
 ## Demo:
