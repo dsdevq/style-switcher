@@ -7,6 +7,8 @@ export declare type MapboxStyleDefinition = {
 };
 export declare type MapboxStyleSwitcherOptions = {
     defaultStyle?: string;
+    displayMode?: DisplayMode;
+    showTitle?: boolean;
     eventListeners?: MapboxStyleSwitcherEvents;
 };
 declare type MapboxStyleSwitcherEvents = {
@@ -14,6 +16,7 @@ declare type MapboxStyleSwitcherEvents = {
     onSelect?: (event: MouseEvent) => boolean;
     onChange?: (event: MouseEvent, style: string) => boolean;
 };
+declare type DisplayMode = 'row' | 'column';
 export declare class MapboxStyleSwitcherControl implements IControl {
     private static readonly DEFAULT_STYLE;
     private static readonly DEFAULT_STYLES;
@@ -24,6 +27,7 @@ export declare class MapboxStyleSwitcherControl implements IControl {
     private styleButton;
     private styles;
     private defaultStyle;
+    private options;
     constructor(styles?: MapboxStyleDefinition[], options?: MapboxStyleSwitcherOptions | string);
     private changeTheme;
     getDefaultPosition(): ControlPosition;

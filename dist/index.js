@@ -10,6 +10,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 class MapboxStyleSwitcherControl {
     constructor(styles, options) {
+        this.options = {
+            displayMode: 'column',
+            showTitle: true,
+        };
         this.styles = styles || MapboxStyleSwitcherControl.DEFAULT_STYLES;
         const defaultStyle = typeof options === 'string'
             ? options
@@ -18,6 +22,9 @@ class MapboxStyleSwitcherControl {
                 : undefined;
         this.defaultStyle =
             defaultStyle || MapboxStyleSwitcherControl.DEFAULT_STYLE;
+        if (options && typeof options === 'object') {
+            this.options = options;
+        }
         this.onDocumentClick = this.onDocumentClick.bind(this);
         this.events =
             typeof options !== 'string' && options
@@ -45,11 +52,11 @@ class MapboxStyleSwitcherControl {
     onAdd(map) {
         this.map = map;
         this.controlContainer = document.createElement('div');
-        this.controlContainer.classList.add('mapboxgl-ctrl', 'mapboxgl-ctrl-group', 'maplibregl-ctrl', 'maplibregl-ctrl', 'maplibregl-ctrl-group');
+        this.controlContainer.classList.add('mapboxgl-ctrl', 'mapboxgl-ctrl-group', 'maplibregl-ctrl', 'maplibregl-ctrl-group');
         this.mapStyleContainer = document.createElement('div');
         this.styleButton = document.createElement('button');
         this.styleButton.type = 'button';
-        this.mapStyleContainer.classList.add('mapboxgl-style-list');
+        this.mapStyleContainer.classList.add('mapboxgl-style-list', this.options.displayMode);
         for (const { imageSrc, activeImageScr, title, uri } of this.styles) {
             const styleElement = document.createElement('button');
             if (imageSrc) {
@@ -60,11 +67,13 @@ class MapboxStyleSwitcherControl {
                 image.height = 20;
                 styleElement.appendChild(image);
             }
+            if (this.options.showTitle) {
+                const titleEl = document.createElement('span');
+                titleEl.textContent = title;
+                styleElement.appendChild(titleEl);
+            }
             const icon = styleElement.querySelector('.icon');
             styleElement.type = 'button';
-            const titleEl = document.createElement('span');
-            titleEl.textContent = title;
-            styleElement.appendChild(titleEl);
             styleElement.classList.add(title.replace(/[^a-z0-9-]/gi, '_'));
             styleElement.addEventListener('click', (event) => __awaiter(this, void 0, void 0, function* () {
                 this.closeModal();
@@ -132,7 +141,7 @@ class MapboxStyleSwitcherControl {
     }
     openModal() {
         if (this.mapStyleContainer && this.styleButton) {
-            this.mapStyleContainer.style.display = 'block';
+            this.mapStyleContainer.style.display = 'flex';
             this.styleButton.style.display = 'none';
         }
     }

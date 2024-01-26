@@ -4,6 +4,7 @@
 
 :root {
 	--_border-color: var(--border-color, #cacbcd);
+	--_border-size: var(--border-width, 40%);
 }
 
 .mapboxgl-ctrl-group .mapboxgl-style-list button {
@@ -12,17 +13,45 @@
 	cursor: pointer;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 16px;
 	font-size: 14px;
 	position: relative;
-	padding: 8px;
+	padding: 6px 8px;
 	text-align: right;
 	width: 100%;
 	height: auto;
 }
 
-.mapboxgl-style-list button:not(:last-child) {
-	border-bottom: 1px solid var(--_border-color);
+.mapboxgl-style-list.row button:not(:last-child)::after {
+	position: absolute;
+	content: '';
+	width: 1px;
+	height: var(--_border-size);
+	background-color: var(--_border-color);
+	right: 0;
+	bottom: 0;
+	top: 0;
+	margin: auto 0;
+}
+
+.mapboxgl-style-list.column button:not(:last-child)::after {
+	position: absolute;
+	content: '';
+	width: var(--_border-size);
+	height: 1px;
+	background-color: var(--_border-color);
+	bottom: -8px;
+	left: 0;
+	right: 0;
+	margin: 0 auto;
+}
+
+.row {
+	flex-direction: row;
+}
+
+.column {
+	flex-direction: column;
 }
 
 .mapboxgl-style-list button.active {

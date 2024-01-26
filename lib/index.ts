@@ -9,6 +9,8 @@ export type MapboxStyleDefinition = {
 
 export type MapboxStyleSwitcherOptions = {
 	defaultStyle?: string;
+	displayMode?: DisplayMode;
+	showTitle?: boolean;
 	eventListeners?: MapboxStyleSwitcherEvents;
 };
 
@@ -17,6 +19,8 @@ type MapboxStyleSwitcherEvents = {
 	onSelect?: (event: MouseEvent) => boolean;
 	onChange?: (event: MouseEvent, style: string) => boolean;
 };
+
+type DisplayMode = 'row' | 'column';
 
 export class MapboxStyleSwitcherControl implements IControl {
 	private static readonly DEFAULT_STYLE = 'Streets';
@@ -35,7 +39,10 @@ export class MapboxStyleSwitcherControl implements IControl {
 	private styleButton: HTMLButtonElement | undefined;
 	private styles: MapboxStyleDefinition[];
 	private defaultStyle: string;
-
+	private options: MapboxStyleSwitcherOptions = {
+		displayMode: 'column',
+		showTitle: true,
+	};
 	constructor(
 		styles?: MapboxStyleDefinition[],
 		options?: MapboxStyleSwitcherOptions | string
@@ -49,6 +56,10 @@ export class MapboxStyleSwitcherControl implements IControl {
 				: undefined;
 		this.defaultStyle =
 			defaultStyle || MapboxStyleSwitcherControl.DEFAULT_STYLE;
+
+		if (options && typeof options === 'object') {
+			this.options = options;
+		}
 		this.onDocumentClick = this.onDocumentClick.bind(this);
 		this.events =
 			typeof options !== 'string' && options
@@ -84,13 +95,16 @@ export class MapboxStyleSwitcherControl implements IControl {
 			'mapboxgl-ctrl',
 			'mapboxgl-ctrl-group',
 			'maplibregl-ctrl',
-			'maplibregl-ctrl',
 			'maplibregl-ctrl-group'
 		);
 		this.mapStyleContainer = document.createElement('div');
 		this.styleButton = document.createElement('button');
 		this.styleButton.type = 'button';
-		this.mapStyleContainer.classList.add('mapboxgl-style-list');
+
+		this.mapStyleContainer.classList.add(
+			'mapboxgl-style-list',
+			this.options.displayMode!
+		);
 		for (const { imageSrc, activeImageScr, title, uri } of this.styles) {
 			const styleElement = document.createElement('button');
 			if (imageSrc) {
@@ -101,14 +115,15 @@ export class MapboxStyleSwitcherControl implements IControl {
 				image.height = 20;
 				styleElement.appendChild(image);
 			}
+			if (this.options.showTitle) {
+				const titleEl = document.createElement('span');
+				titleEl.textContent = title;
+				styleElement.appendChild(titleEl);
+			}
 
 			const icon = styleElement.querySelector('.icon') as HTMLImageElement;
 
 			styleElement.type = 'button';
-
-			const titleEl = document.createElement('span');
-			titleEl.textContent = title;
-			styleElement.appendChild(titleEl);
 			styleElement.classList.add(title.replace(/[^a-z0-9-]/gi, '_'));
 			styleElement.addEventListener('click', async (event) => {
 				this.closeModal();
@@ -187,7 +202,7 @@ export class MapboxStyleSwitcherControl implements IControl {
 
 	private openModal(): void {
 		if (this.mapStyleContainer && this.styleButton) {
-			this.mapStyleContainer.style.display = 'block';
+			this.mapStyleContainer.style.display = 'flex';
 			this.styleButton.style.display = 'none';
 		}
 	}
