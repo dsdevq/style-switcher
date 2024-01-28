@@ -1,48 +1,36 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-class MapboxStyleSwitcherControl {
-    constructor(styles, options) {
-        this.options = {
-            displayMode: 'column',
-            showTitle: true,
-        };
-        this.styles = styles || MapboxStyleSwitcherControl.DEFAULT_STYLES;
-        const defaultStyle = typeof options === 'string'
-            ? options
-            : options
-                ? options.defaultStyle
-                : undefined;
-        this.defaultStyle =
-            defaultStyle || MapboxStyleSwitcherControl.DEFAULT_STYLE;
-        if (options && typeof options === 'object') {
-            this.options = options;
-        }
-        this.onDocumentClick = this.onDocumentClick.bind(this);
-        this.events =
-            typeof options !== 'string' && options
-                ? options.eventListeners
-                : undefined;
+exports.MaplibreStyleSwitcherControl = void 0;
+class MaplibreStyleSwitcherControl {
+    get defaultStyle() {
+        const defaultStyle = typeof this.options === 'string'
+            ? this.options
+            : this.options?.defaultStyle;
+        return (defaultStyle || MaplibreStyleSwitcherControl.DEFAULT_OPTIONS.defaultStyle);
     }
-    changeTheme(map, url) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return fetch(url)
-                .then((res) => res.json())
-                .then((newStyle) => {
-                const currentStyle = map.getStyle();
-                newStyle.sources = Object.assign({}, currentStyle.sources);
-                newStyle.layers = [...newStyle.layers, ...currentStyle.layers].filter((value, index, array) => {
-                    return index === array.findIndex((v) => v.id === value.id);
-                });
-                map.setStyle(newStyle);
-            });
+    get events() {
+        return this.options?.eventListeners;
+    }
+    constructor(styles, options) {
+        this.styles = styles || MaplibreStyleSwitcherControl.DEFAULT_STYLES;
+        this.options = options || MaplibreStyleSwitcherControl.DEFAULT_OPTIONS;
+        this.onDocumentClick = this.onDocumentClick.bind(this);
+    }
+    changeStyle(map, uri) {
+        map.setStyle(uri, {
+            ...(this.options?.transformStyle && {
+                transformStyle: (currentStyle, newStyle) => {
+                    if (!currentStyle)
+                        return newStyle;
+                    const sources = currentStyle.sources;
+                    const layers = [...newStyle.layers, ...currentStyle.layers].filter((value, index, array) => index === array.findIndex(({ id }) => id === value.id));
+                    return {
+                        ...newStyle,
+                        sources,
+                        layers,
+                    };
+                },
+            }),
         });
     }
     getDefaultPosition() {
@@ -67,15 +55,16 @@ class MapboxStyleSwitcherControl {
                 image.height = 20;
                 styleElement.appendChild(image);
             }
-            if (this.options.showTitle) {
+            if (this.options?.showTitle) {
                 const titleEl = document.createElement('span');
                 titleEl.textContent = title;
                 styleElement.appendChild(titleEl);
             }
             const icon = styleElement.querySelector('.icon');
-            styleElement.type = 'button';
+            styleElement.setAttribute('type', 'button');
             styleElement.classList.add(title.replace(/[^a-z0-9-]/gi, '_'));
-            styleElement.addEventListener('click', (event) => __awaiter(this, void 0, void 0, function* () {
+            styleElement.addEventListener('click', (event) => {
+                console.log('click');
                 this.closeModal();
                 if (styleElement.classList.contains('active')) {
                     return;
@@ -83,14 +72,14 @@ class MapboxStyleSwitcherControl {
                 if (this.events && this.events.onOpen && this.events.onOpen(event)) {
                     return;
                 }
-                yield this.changeTheme(map, uri);
+                this.changeStyle(map, uri);
                 const el = this.mapStyleContainer.getElementsByClassName('active')[0];
                 if (el) {
                     el.classList.remove('active');
                     const elIcon = el.querySelector('.icon');
                     const title = el.classList[0];
                     const elImageSrc = this.styles.find((v) => v.title === title).imageSrc;
-                    elImageSrc && elIcon.setAttribute('src', elImageSrc);
+                    elImageSrc && elIcon?.setAttribute('src', elImageSrc);
                 }
                 styleElement.classList.add('active');
                 if (activeImageScr) {
@@ -101,7 +90,7 @@ class MapboxStyleSwitcherControl {
                     this.events.onChange(event, uri)) {
                     return;
                 }
-            }));
+            });
             if (title === this.defaultStyle) {
                 styleElement.classList.add('active');
                 icon && activeImageScr && icon.setAttribute('src', activeImageScr);
@@ -152,13 +141,18 @@ class MapboxStyleSwitcherControl {
         }
     }
 }
-MapboxStyleSwitcherControl.DEFAULT_STYLE = 'Streets';
-MapboxStyleSwitcherControl.DEFAULT_STYLES = [
+exports.MaplibreStyleSwitcherControl = MaplibreStyleSwitcherControl;
+MaplibreStyleSwitcherControl.DEFAULT_OPTIONS = {
+    defaultStyle: 'Streets',
+    transformStyle: false,
+    displayMode: 'column',
+    showTitle: true,
+};
+MaplibreStyleSwitcherControl.DEFAULT_STYLES = [
     { title: 'Dark', uri: 'mapbox://styles/mapbox/dark-v10' },
     { title: 'Light', uri: 'mapbox://styles/mapbox/light-v10' },
     { title: 'Outdoors', uri: 'mapbox://styles/mapbox/outdoors-v11' },
     { title: 'Satellite', uri: 'mapbox://styles/mapbox/satellite-streets-v11' },
     { title: 'Streets', uri: 'mapbox://styles/mapbox/streets-v11' },
 ];
-exports.MapboxStyleSwitcherControl = MapboxStyleSwitcherControl;
 //# sourceMappingURL=index.js.map
