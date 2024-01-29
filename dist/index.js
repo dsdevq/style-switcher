@@ -16,21 +16,26 @@ class MaplibreStyleSwitcherControl {
         this.options = options || MaplibreStyleSwitcherControl.DEFAULT_OPTIONS;
         this.onDocumentClick = this.onDocumentClick.bind(this);
     }
-    changeStyle(map, uri) {
-        map.setStyle(uri, {
-            ...(this.options?.transformStyle && {
-                transformStyle: (currentStyle, newStyle) => {
-                    if (!currentStyle)
-                        return newStyle;
-                    const sources = currentStyle.sources;
-                    const layers = [...newStyle.layers, ...currentStyle.layers].filter((value, index, array) => index === array.findIndex(({ id }) => id === value.id));
-                    return {
-                        ...newStyle,
-                        sources,
-                        layers,
-                    };
-                },
-            }),
+    async changeStyle(map, uri) {
+        return new Promise((res) => {
+            map.once('styledata', () => {
+                res();
+            });
+            map.setStyle(uri, {
+                ...(this.options?.transformStyle && {
+                    transformStyle: (currentStyle, newStyle) => {
+                        if (!currentStyle)
+                            return newStyle;
+                        const sources = currentStyle.sources;
+                        const layers = [...newStyle.layers, ...currentStyle.layers].filter((value, index, array) => index === array.findIndex(({ id }) => id === value.id));
+                        return {
+                            ...newStyle,
+                            sources,
+                            layers,
+                        };
+                    },
+                }),
+            });
         });
     }
     getDefaultPosition() {
@@ -49,10 +54,10 @@ class MaplibreStyleSwitcherControl {
             const styleElement = document.createElement('button');
             if (imageSrc) {
                 const image = document.createElement('img');
-                image.classList.add('icon');
                 image.src = imageSrc;
                 image.width = 20;
                 image.height = 20;
+                image.classList.add('icon');
                 styleElement.appendChild(image);
             }
             if (this.options?.showTitle) {
@@ -63,8 +68,7 @@ class MaplibreStyleSwitcherControl {
             const icon = styleElement.querySelector('.icon');
             styleElement.setAttribute('type', 'button');
             styleElement.classList.add(title.replace(/[^a-z0-9-]/gi, '_'));
-            styleElement.addEventListener('click', (event) => {
-                console.log('click');
+            styleElement.addEventListener('click', async (event) => {
                 this.closeModal();
                 if (styleElement.classList.contains('active')) {
                     return;
@@ -72,7 +76,7 @@ class MaplibreStyleSwitcherControl {
                 if (this.events && this.events.onOpen && this.events.onOpen(event)) {
                     return;
                 }
-                this.changeStyle(map, uri);
+                await this.changeStyle(map, uri);
                 const el = this.mapStyleContainer.getElementsByClassName('active')[0];
                 if (el) {
                     el.classList.remove('active');

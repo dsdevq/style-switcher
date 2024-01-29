@@ -68,23 +68,29 @@ export class MaplibreStyleSwitcherControl implements IControl {
 		this.onDocumentClick = this.onDocumentClick.bind(this);
 	}
 
-	private changeStyle(map: Map, uri: string): void {
-		map.setStyle(uri, {
-			...(this.options?.transformStyle && {
-				transformStyle: (currentStyle, newStyle) => {
-					if (!currentStyle) return newStyle;
-					const sources = currentStyle.sources;
-					const layers = [...newStyle.layers, ...currentStyle.layers].filter(
-						(value, index, array) =>
-							index === array.findIndex(({ id }) => id === value.id)
-					);
-					return {
-						...newStyle,
-						sources,
-						layers,
-					};
-				},
-			}),
+	private async changeStyle(map: Map, uri: string): Promise<void> {
+		return new Promise((res) => {
+			map.once('styledata', () => {
+				res();
+			});
+
+			map.setStyle(uri, {
+				...(this.options?.transformStyle && {
+					transformStyle: (currentStyle, newStyle) => {
+						if (!currentStyle) return newStyle;
+						const sources = currentStyle.sources;
+						const layers = [...newStyle.layers, ...currentStyle.layers].filter(
+							(value, index, array) =>
+								index === array.findIndex(({ id }) => id === value.id)
+						);
+						return {
+							...newStyle,
+							sources,
+							layers,
+						};
+					},
+				}),
+			});
 		});
 	}
 
@@ -130,7 +136,7 @@ export class MaplibreStyleSwitcherControl implements IControl {
 
 			styleElement.setAttribute('type', 'button');
 			styleElement.classList.add(title.replace(/[^a-z0-9-]/gi, '_'));
-			styleElement.addEventListener('click', (event) => {
+			styleElement.addEventListener('click', async (event) => {
 				this.closeModal();
 				if (styleElement.classList.contains('active')) {
 					return;
@@ -138,7 +144,7 @@ export class MaplibreStyleSwitcherControl implements IControl {
 				if (this.events && this.events.onOpen && this.events.onOpen(event)) {
 					return;
 				}
-				this.changeStyle(map, uri);
+				await this.changeStyle(map, uri);
 				const el = this.mapStyleContainer!.getElementsByClassName('active')[0];
 				if (el) {
 					el.classList.remove('active');
