@@ -1,6 +1,6 @@
 {
   "name": "maplibre-gl-style-switcher",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "Mapbox GL JS Style Switcher fork for Maplibre GL",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
