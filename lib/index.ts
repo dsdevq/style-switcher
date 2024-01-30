@@ -190,36 +190,6 @@ export class MaplibreStyleSwitcherControl implements IControl {
 		return this.controlContainer;
 	}
 
-	private async handleButtonClick(
-		event: MouseEvent,
-		styleElement: HTMLButtonElement,
-		map: Map,
-		uri: string,
-		activeImageScr: string,
-		icon: HTMLImageElement
-	) {
-		this.closeModal();
-		if (styleElement.classList.contains('active')) {
-			return;
-		}
-		if (this.events && this.events.onOpen && this.events.onOpen(event)) {
-			return;
-		}
-		await this.changeStyle(map, uri);
-		const el = this.mapStyleContainer!.getElementsByClassName('active')[0];
-		if (el) {
-			el.classList.remove('active');
-			const elIcon = el.querySelector('.icon') as HTMLImageElement | null;
-			const title = el.classList[0];
-			const elImageSrc = this.styles.find((v) => v.title === title)!.imageSrc;
-			elImageSrc && elIcon?.setAttribute('src', elImageSrc);
-		}
-		styleElement.classList.add('active');
-		if (activeImageScr) {
-			icon.setAttribute('src', activeImageScr);
-		}
-	}
-
 	public onRemove(): void {
 		if (
 			!this.controlContainer ||
