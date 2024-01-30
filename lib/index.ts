@@ -136,7 +136,7 @@ export class MaplibreStyleSwitcherControl implements IControl {
 
 			styleElement.setAttribute('type', 'button');
 			styleElement.classList.add(title.replace(/[^a-z0-9-]/gi, '_'));
-			styleElement.addEventListener('click', async (event) => {
+			styleElement.addEventListener('click', (event) => {
 				this.closeModal();
 				if (styleElement.classList.contains('active')) {
 					return;
@@ -144,7 +144,15 @@ export class MaplibreStyleSwitcherControl implements IControl {
 				if (this.events && this.events.onOpen && this.events.onOpen(event)) {
 					return;
 				}
-				await this.changeStyle(map, uri);
+				this.changeStyle(map, uri).then(() => {
+					if (
+						this.events &&
+						this.events.onChange &&
+						this.events.onChange(event, uri)
+					) {
+						return;
+					}
+				});
 				const el = this.mapStyleContainer!.getElementsByClassName('active')[0];
 				if (el) {
 					el.classList.remove('active');
@@ -158,13 +166,6 @@ export class MaplibreStyleSwitcherControl implements IControl {
 				styleElement.classList.add('active');
 				if (activeImageScr) {
 					icon.setAttribute('src', activeImageScr);
-				}
-				if (
-					this.events &&
-					this.events.onChange &&
-					this.events.onChange(event, uri)
-				) {
-					return;
 				}
 			});
 			if (title === this.defaultStyle) {
@@ -187,6 +188,36 @@ export class MaplibreStyleSwitcherControl implements IControl {
 		this.controlContainer.appendChild(this.styleButton);
 		this.controlContainer.appendChild(this.mapStyleContainer);
 		return this.controlContainer;
+	}
+
+	private async handleButtonClick(
+		event: MouseEvent,
+		styleElement: HTMLButtonElement,
+		map: Map,
+		uri: string,
+		activeImageScr: string,
+		icon: HTMLImageElement
+	) {
+		this.closeModal();
+		if (styleElement.classList.contains('active')) {
+			return;
+		}
+		if (this.events && this.events.onOpen && this.events.onOpen(event)) {
+			return;
+		}
+		await this.changeStyle(map, uri);
+		const el = this.mapStyleContainer!.getElementsByClassName('active')[0];
+		if (el) {
+			el.classList.remove('active');
+			const elIcon = el.querySelector('.icon') as HTMLImageElement | null;
+			const title = el.classList[0];
+			const elImageSrc = this.styles.find((v) => v.title === title)!.imageSrc;
+			elImageSrc && elIcon?.setAttribute('src', elImageSrc);
+		}
+		styleElement.classList.add('active');
+		if (activeImageScr) {
+			icon.setAttribute('src', activeImageScr);
+		}
 	}
 
 	public onRemove(): void {

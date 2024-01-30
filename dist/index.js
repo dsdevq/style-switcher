@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.MaplibreStyleSwitcherControl = void 0;
-class MaplibreStyleSwitcherControl {
+export class MaplibreStyleSwitcherControl {
     get defaultStyle() {
         const defaultStyle = typeof this.options === 'string'
             ? this.options
@@ -68,7 +65,7 @@ class MaplibreStyleSwitcherControl {
             const icon = styleElement.querySelector('.icon');
             styleElement.setAttribute('type', 'button');
             styleElement.classList.add(title.replace(/[^a-z0-9-]/gi, '_'));
-            styleElement.addEventListener('click', async (event) => {
+            styleElement.addEventListener('click', (event) => {
                 this.closeModal();
                 if (styleElement.classList.contains('active')) {
                     return;
@@ -76,7 +73,13 @@ class MaplibreStyleSwitcherControl {
                 if (this.events && this.events.onOpen && this.events.onOpen(event)) {
                     return;
                 }
-                await this.changeStyle(map, uri);
+                this.changeStyle(map, uri).then(() => {
+                    if (this.events &&
+                        this.events.onChange &&
+                        this.events.onChange(event, uri)) {
+                        return;
+                    }
+                });
                 const el = this.mapStyleContainer.getElementsByClassName('active')[0];
                 if (el) {
                     el.classList.remove('active');
@@ -88,11 +91,6 @@ class MaplibreStyleSwitcherControl {
                 styleElement.classList.add('active');
                 if (activeImageScr) {
                     icon.setAttribute('src', activeImageScr);
-                }
-                if (this.events &&
-                    this.events.onChange &&
-                    this.events.onChange(event, uri)) {
-                    return;
                 }
             });
             if (title === this.defaultStyle) {
@@ -145,7 +143,6 @@ class MaplibreStyleSwitcherControl {
         }
     }
 }
-exports.MaplibreStyleSwitcherControl = MaplibreStyleSwitcherControl;
 MaplibreStyleSwitcherControl.DEFAULT_OPTIONS = {
     defaultStyle: 'Streets',
     transformStyle: false,
