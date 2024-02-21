@@ -78,17 +78,17 @@ export class MaplibreStyleSwitcherControl implements IControl {
 				...(this.options?.transformStyle && {
 					transformStyle: (currentStyle, newStyle) => {
 						if (!currentStyle) return newStyle;
-						const sources = currentStyle.sources;
-						const layers = [...newStyle.layers, ...currentStyle.layers].filter(
+						newStyle.sources = { ...currentStyle.sources };
+						newStyle.layers = [
+							...newStyle.layers,
+							...currentStyle.layers,
+						].filter(
 							(value, index, array) =>
 								index === array.findIndex(({ id }) => id === value.id)
 						);
-						return {
-							...newStyle,
-							sources,
-							layers,
-						};
+						return newStyle;
 					},
+					diff: false,
 				}),
 			});
 		});
