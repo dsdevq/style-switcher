@@ -9,11 +9,11 @@ export class MaplibreStyleSwitcherControl {
         return this.options?.eventListeners;
     }
     constructor(styles, options) {
-        this.styles = styles || MaplibreStyleSwitcherControl.DEFAULT_STYLES;
+        this.styles = styles;
         this.options = options || MaplibreStyleSwitcherControl.DEFAULT_OPTIONS;
         this.onDocumentClick = this.onDocumentClick.bind(this);
     }
-    async changeStyle(map, uri) {
+    async changeStyle(map, uri, from) {
         return new Promise((res) => {
             map.once('styledata', () => {
                 res();
@@ -23,14 +23,14 @@ export class MaplibreStyleSwitcherControl {
                     transformStyle: (currentStyle, newStyle) => {
                         if (!currentStyle)
                             return newStyle;
-                        const sources = currentStyle.sources;
-                        const layers = [...newStyle.layers, ...currentStyle.layers].filter((value, index, array) => index === array.findIndex(({ id }) => id === value.id));
-                        return {
-                            ...newStyle,
-                            sources,
-                            layers,
-                        };
+                        newStyle.sources = { ...currentStyle.sources, ...newStyle.sources };
+                        newStyle.layers = [
+                            ...newStyle.layers,
+                            ...currentStyle.layers.slice(from.layer[currentStyle.name]),
+                        ].filter((value, index, array) => index === array.findIndex(({ id }) => id === value.id));
+                        return structuredClone(newStyle);
                     },
+                    diff: false,
                 }),
             });
         });
@@ -47,7 +47,7 @@ export class MaplibreStyleSwitcherControl {
         this.styleButton = document.createElement('button');
         this.styleButton.type = 'button';
         this.mapStyleContainer.classList.add('mapboxgl-style-list', this.options.displayMode);
-        for (const { imageSrc, activeImageScr, title, uri } of this.styles) {
+        for (const { imageSrc, activeImageScr, title, uri, from } of this.styles) {
             const styleElement = document.createElement('button');
             if (imageSrc) {
                 const image = document.createElement('img');
@@ -73,7 +73,7 @@ export class MaplibreStyleSwitcherControl {
                 if (this.events && this.events.onOpen && this.events.onOpen(event)) {
                     return;
                 }
-                this.changeStyle(map, uri).then(() => {
+                this.changeStyle(map, uri, from).then(() => {
                     if (this.events &&
                         this.events.onChange &&
                         this.events.onChange(event, uri)) {
@@ -149,11 +149,4 @@ MaplibreStyleSwitcherControl.DEFAULT_OPTIONS = {
     displayMode: 'column',
     showTitle: true,
 };
-MaplibreStyleSwitcherControl.DEFAULT_STYLES = [
-    { title: 'Dark', uri: 'mapbox://styles/mapbox/dark-v10' },
-    { title: 'Light', uri: 'mapbox://styles/mapbox/light-v10' },
-    { title: 'Outdoors', uri: 'mapbox://styles/mapbox/outdoors-v11' },
-    { title: 'Satellite', uri: 'mapbox://styles/mapbox/satellite-streets-v11' },
-    { title: 'Streets', uri: 'mapbox://styles/mapbox/streets-v11' },
-];
 //# sourceMappingURL=index.js.map

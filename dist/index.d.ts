@@ -4,6 +4,10 @@ export type MaplibreStyleDefinition = {
     uri: string;
     imageSrc?: string;
     activeImageScr?: string;
+    from: {
+        layer: Record<string, number>;
+        source: Record<string, number>;
+    };
 };
 export type MaplibreStyleSwitcherOptions = Partial<{
     defaultStyle: string;
@@ -20,7 +24,6 @@ type MaplibreStyleSwitcherEvents = Partial<{
 type DisplayMode = 'row' | 'column';
 export declare class MaplibreStyleSwitcherControl implements IControl {
     private static readonly DEFAULT_OPTIONS;
-    private static readonly DEFAULT_STYLES;
     private controlContainer;
     private map?;
     private mapStyleContainer?;

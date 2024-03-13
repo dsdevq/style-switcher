@@ -5,6 +5,10 @@ export type MaplibreStyleDefinition = {
 	uri: string;
 	imageSrc?: string;
 	activeImageScr?: string;
+	from: {
+		layer: Record<string, number>;
+		source: Record<string, number>;
+	};
 };
 
 export type MaplibreStyleSwitcherOptions = Partial<{
@@ -30,13 +34,6 @@ export class MaplibreStyleSwitcherControl implements IControl {
 		displayMode: 'column',
 		showTitle: true,
 	};
-	private static readonly DEFAULT_STYLES = [
-		{ title: 'Dark', uri: 'mapbox://styles/mapbox/dark-v10' },
-		{ title: 'Light', uri: 'mapbox://styles/mapbox/light-v10' },
-		{ title: 'Outdoors', uri: 'mapbox://styles/mapbox/outdoors-v11' },
-		{ title: 'Satellite', uri: 'mapbox://styles/mapbox/satellite-streets-v11' },
-		{ title: 'Streets', uri: 'mapbox://styles/mapbox/streets-v11' },
-	];
 
 	private controlContainer: HTMLElement;
 	private map?: Map;
@@ -63,12 +60,19 @@ export class MaplibreStyleSwitcherControl implements IControl {
 		styles?: MaplibreStyleDefinition[],
 		options?: MaplibreStyleSwitcherOptions
 	) {
-		this.styles = styles || MaplibreStyleSwitcherControl.DEFAULT_STYLES;
+		this.styles = styles!;
 		this.options = options || MaplibreStyleSwitcherControl.DEFAULT_OPTIONS;
 		this.onDocumentClick = this.onDocumentClick.bind(this);
 	}
 
-	private async changeStyle(map: Map, uri: string): Promise<void> {
+	private async changeStyle(
+		map: Map,
+		uri: string,
+		from: {
+			layer: Record<string, number>;
+			source: Record<string, number>;
+		}
+	): Promise<void> {
 		return new Promise((res) => {
 			map.once('styledata', () => {
 				res();
@@ -78,17 +82,34 @@ export class MaplibreStyleSwitcherControl implements IControl {
 				...(this.options?.transformStyle && {
 					transformStyle: (currentStyle, newStyle) => {
 						if (!currentStyle) return newStyle;
-						const sources = currentStyle.sources;
-						const layers = [...newStyle.layers, ...currentStyle.layers].filter(
+
+						// !
+						// * 1. Take old style. Get all sources from it.
+						// * 2. Take old style layers. Get layers by index FROM - TO
+						// * 3. Concatenate new layers with picked up old layers
+						// * 4. Take sprites and glyphs from new layer
+
+						newStyle.sources = { ...currentStyle.sources, ...newStyle.sources };
+						newStyle.layers = [
+							...newStyle.layers,
+							...currentStyle.layers.slice(from.layer[currentStyle.name!]),
+						].filter(
 							(value, index, array) =>
 								index === array.findIndex(({ id }) => id === value.id)
 						);
-						return {
-							...newStyle,
-							sources,
-							layers,
-						};
+
+						return structuredClone(newStyle);
+						// newStyle.sources = { ...currentStyle.sources };
+						// newStyle.layers = [
+						// 	...newStyle.layers,
+						// 	...currentStyle.layers,
+						// ].filter(
+						// 	(value, index, array) =>
+						// 		index === array.findIndex(({ id }) => id === value.id)
+						// );
+						// return newStyle;
 					},
+					diff: false,
 				}),
 			});
 		});
@@ -116,7 +137,7 @@ export class MaplibreStyleSwitcherControl implements IControl {
 			'mapboxgl-style-list',
 			this.options!.displayMode!
 		);
-		for (const { imageSrc, activeImageScr, title, uri } of this.styles) {
+		for (const { imageSrc, activeImageScr, title, uri, from } of this.styles) {
 			const styleElement = document.createElement('button');
 			if (imageSrc) {
 				const image = document.createElement('img');
@@ -144,7 +165,7 @@ export class MaplibreStyleSwitcherControl implements IControl {
 				if (this.events && this.events.onOpen && this.events.onOpen(event)) {
 					return;
 				}
-				this.changeStyle(map, uri).then(() => {
+				this.changeStyle(map, uri, from).then(() => {
 					if (
 						this.events &&
 						this.events.onChange &&
