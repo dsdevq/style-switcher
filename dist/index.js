@@ -13,22 +13,61 @@ export class MaplibreStyleSwitcherControl {
         this.options = options || MaplibreStyleSwitcherControl.DEFAULT_OPTIONS;
         this.onDocumentClick = this.onDocumentClick.bind(this);
     }
-    async changeStyle(map, uri, from) {
+    async changeStyle(map, uri, targetProps, properties) {
         return new Promise((res) => {
+            const { type, name } = targetProps;
+            const arcGIS = type === 'arcgis';
+            const ortho = type === 'ortho';
             map.once('styledata', () => {
+                this.currentStyleName = name;
                 res();
             });
-            map.setStyle(uri, {
+            map.setStyle(type === 'arcgis' ? `${uri}/resources/styles/root.json` : uri, {
                 ...(this.options?.transformStyle && {
                     transformStyle: (currentStyle, newStyle) => {
                         if (!currentStyle)
                             return newStyle;
-                        newStyle.sources = { ...currentStyle.sources, ...newStyle.sources };
-                        newStyle.layers = [
-                            ...newStyle.layers,
-                            ...currentStyle.layers.slice(from.layer[currentStyle.name]),
-                        ].filter((value, index, array) => index === array.findIndex(({ id }) => id === value.id));
-                        return structuredClone(newStyle);
+                        const { source, layer } = properties[currentStyle.name ?? this.currentStyleName];
+                        const commonSources = Object.fromEntries(Object.entries(currentStyle.sources).slice(source));
+                        const commonLayers = currentStyle.layers.slice(layer);
+                        return {
+                            ...newStyle,
+                            sources: {
+                                ...(ortho
+                                    ? {
+                                        ...newStyle.sources,
+                                        ...Object.fromEntries(Object.entries(targetProps.serviceUrls).map(([key, value]) => {
+                                            return [
+                                                key,
+                                                {
+                                                    url: `${value}?f=pjson`,
+                                                    type: 'raster',
+                                                    tiles: [
+                                                        `${value}/exportImage?bbox={bbox-epsg-3857}&bboxSR=102100&format=png32&imageSR=102100&f=image`,
+                                                    ],
+                                                    tileSize: 256,
+                                                },
+                                            ];
+                                        })),
+                                    }
+                                    : newStyle.sources),
+                                ...(arcGIS && {
+                                    esri: {
+                                        ...newStyle.sources['esri'],
+                                        tiles: [`${uri}/tile/{z}/{y}/{x}.pbf`],
+                                        url: `${uri}?f=pjson`,
+                                    },
+                                }),
+                                ...commonSources,
+                            },
+                            layers: [...newStyle.layers, ...commonLayers],
+                            sprite: arcGIS
+                                ? `${uri}/resources/sprites/sprite`
+                                : newStyle.sprite,
+                            glyphs: arcGIS
+                                ? `${uri}/resources/fonts/{fontstack}/{range}.pbf`
+                                : newStyle.glyphs,
+                        };
                     },
                     diff: false,
                 }),
@@ -47,7 +86,7 @@ export class MaplibreStyleSwitcherControl {
         this.styleButton = document.createElement('button');
         this.styleButton.type = 'button';
         this.mapStyleContainer.classList.add('mapboxgl-style-list', this.options.displayMode);
-        for (const { imageSrc, activeImageScr, title, uri, from } of this.styles) {
+        for (const { imageSrc, activeImageScr, title, uri, targetProps, properties, } of this.styles) {
             const styleElement = document.createElement('button');
             if (imageSrc) {
                 const image = document.createElement('img');
@@ -73,7 +112,7 @@ export class MaplibreStyleSwitcherControl {
                 if (this.events && this.events.onOpen && this.events.onOpen(event)) {
                     return;
                 }
-                this.changeStyle(map, uri, from).then(() => {
+                this.changeStyle(map, uri, targetProps, properties).then(() => {
                     if (this.events &&
                         this.events.onChange &&
                         this.events.onChange(event, uri)) {

@@ -1,14 +1,54 @@
 import { ControlPosition, IControl, Map } from 'maplibre-gl';
 
+export type BaseProps<K extends ThemeType> = {
+	layer: number;
+	source: number;
+	name: string;
+	type: K;
+};
+
+type ArcGISTargetProps = BaseProps<'arcgis'>;
+
+interface OrthoTargetProps extends BaseProps<'ortho'> {
+	serviceUrls: {
+		TrueOrtho2019: string;
+		Pereferiya11: string;
+	};
+}
+
+export type TargetProps =
+	| BaseProps<'style'>
+	| ArcGISTargetProps
+	| OrthoTargetProps;
+
+export type ThemeProps<T extends string = string> = Record<T, TargetProps>;
+
+type ThemeType = 'style' | 'arcgis' | 'ortho';
+
+interface BaseTheme<K extends ThemeType> {
+	styleUrl: string;
+	type: K;
+}
+
+interface ArcGISTheme extends BaseTheme<'arcgis'> {
+	serviceUrl: string;
+}
+
+interface OrthoTheme extends BaseTheme<'ortho'> {
+	serviceUrls: {
+		TrueOrtho2019: string;
+		Pereferiya11: string;
+	};
+}
+export type ThemeBody = BaseTheme<'style'> | ArcGISTheme | OrthoTheme;
+
 export type MaplibreStyleDefinition = {
 	title: string;
 	uri: string;
 	imageSrc?: string;
 	activeImageScr?: string;
-	from: {
-		layer: Record<string, number>;
-		source: Record<string, number>;
-	};
+	targetProps: TargetProps;
+	properties: ThemeProps;
 };
 
 export type MaplibreStyleSwitcherOptions = Partial<{
@@ -41,6 +81,7 @@ export class MaplibreStyleSwitcherControl implements IControl {
 	private styleButton?: HTMLButtonElement;
 	private styles: MaplibreStyleDefinition[];
 	private options?: MaplibreStyleSwitcherOptions;
+	private currentStyleName: string;
 
 	private get defaultStyle(): MaplibreStyleSwitcherOptions['defaultStyle'] {
 		const defaultStyle =
@@ -68,50 +109,80 @@ export class MaplibreStyleSwitcherControl implements IControl {
 	private async changeStyle(
 		map: Map,
 		uri: string,
-		from: {
-			layer: Record<string, number>;
-			source: Record<string, number>;
-		}
+		targetProps: TargetProps,
+		properties: ThemeProps
 	): Promise<void> {
 		return new Promise((res) => {
+			const { type, name } = targetProps;
+			const arcGIS = type === 'arcgis';
+			const ortho = type === 'ortho';
 			map.once('styledata', () => {
+				this.currentStyleName = name;
 				res();
 			});
 
-			map.setStyle(uri, {
-				...(this.options?.transformStyle && {
-					transformStyle: (currentStyle, newStyle) => {
-						if (!currentStyle) return newStyle;
+			map.setStyle(
+				type === 'arcgis' ? `${uri}/resources/styles/root.json` : uri,
+				{
+					...(this.options?.transformStyle && {
+						transformStyle: (currentStyle, newStyle) => {
+							if (!currentStyle) return newStyle;
 
-						// !
-						// * 1. Take old style. Get all sources from it.
-						// * 2. Take old style layers. Get layers by index FROM - TO
-						// * 3. Concatenate new layers with picked up old layers
-						// * 4. Take sprites and glyphs from new layer
+							const { source, layer } =
+								properties[currentStyle.name ?? this.currentStyleName];
 
-						newStyle.sources = { ...currentStyle.sources, ...newStyle.sources };
-						newStyle.layers = [
-							...newStyle.layers,
-							...currentStyle.layers.slice(from.layer[currentStyle.name!]),
-						].filter(
-							(value, index, array) =>
-								index === array.findIndex(({ id }) => id === value.id)
-						);
+							const commonSources = Object.fromEntries(
+								Object.entries(currentStyle.sources).slice(source)
+							);
+							const commonLayers = currentStyle.layers.slice(layer);
 
-						return structuredClone(newStyle);
-						// newStyle.sources = { ...currentStyle.sources };
-						// newStyle.layers = [
-						// 	...newStyle.layers,
-						// 	...currentStyle.layers,
-						// ].filter(
-						// 	(value, index, array) =>
-						// 		index === array.findIndex(({ id }) => id === value.id)
-						// );
-						// return newStyle;
-					},
-					diff: false,
-				}),
-			});
+							return {
+								...newStyle,
+								sources: {
+									...(ortho
+										? {
+												...newStyle.sources,
+												...Object.fromEntries(
+													Object.entries(targetProps.serviceUrls).map(
+														([key, value]) => {
+															return [
+																key,
+																{
+																	url: `${value}?f=pjson`,
+																	type: 'raster',
+																	tiles: [
+																		`${value}/exportImage?bbox={bbox-epsg-3857}&bboxSR=102100&format=png32&imageSR=102100&f=image`,
+																	],
+																	tileSize: 256,
+																},
+															];
+														}
+													)
+												),
+										  }
+										: newStyle.sources),
+									...(arcGIS && {
+										esri: {
+											...newStyle.sources['esri'],
+											tiles: [`${uri}/tile/{z}/{y}/{x}.pbf`],
+											url: `${uri}?f=pjson`,
+										},
+									}),
+									...commonSources,
+								},
+								layers: [...newStyle.layers, ...commonLayers],
+								sprite: arcGIS
+									? `${uri}/resources/sprites/sprite`
+									: newStyle.sprite,
+								glyphs: arcGIS
+									? `${uri}/resources/fonts/{fontstack}/{range}.pbf`
+									: newStyle.glyphs,
+							};
+						},
+						diff: false,
+					}),
+				}
+			);
 		});
 	}
 
@@ -137,7 +208,14 @@ export class MaplibreStyleSwitcherControl implements IControl {
 			'mapboxgl-style-list',
 			this.options!.displayMode!
 		);
-		for (const { imageSrc, activeImageScr, title, uri, from } of this.styles) {
+		for (const {
+			imageSrc,
+			activeImageScr,
+			title,
+			uri,
+			targetProps,
+			properties,
+		} of this.styles) {
 			const styleElement = document.createElement('button');
 			if (imageSrc) {
 				const image = document.createElement('img');
@@ -165,7 +243,7 @@ export class MaplibreStyleSwitcherControl implements IControl {
 				if (this.events && this.events.onOpen && this.events.onOpen(event)) {
 					return;
 				}
-				this.changeStyle(map, uri, from).then(() => {
+				this.changeStyle(map, uri, targetProps, properties).then(() => {
 					if (
 						this.events &&
 						this.events.onChange &&
