@@ -53,6 +53,7 @@ export type MaplibreStyleDefinition = {
 
 export type MaplibreStyleSwitcherOptions = Partial<{
 	defaultStyle: string;
+	glyphsUrl: string;
 	displayMode: DisplayMode;
 	transformStyle: boolean;
 	showTitle: boolean;
@@ -116,6 +117,12 @@ export class MaplibreStyleSwitcherControl implements IControl {
 			const { type, name } = targetProps;
 			const arcGIS = type === 'arcgis';
 			const ortho = type === 'ortho';
+
+			// !TODO:
+			const glyphs = this.options?.glyphsUrl;
+			// const glyphs =
+			// 	'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=5bLPc8m1kPYSO3H8d1T4';
+
 			map.once('styledata', () => {
 				this.currentStyleName = name;
 				res();
@@ -174,9 +181,10 @@ export class MaplibreStyleSwitcherControl implements IControl {
 								sprite: arcGIS
 									? `${uri}/resources/sprites/sprite`
 									: newStyle.sprite,
-								glyphs: arcGIS
-									? `${uri}/resources/fonts/{fontstack}/{range}.pbf`
-									: newStyle.glyphs,
+								// glyphs: arcGIS
+								// 	? `${uri}/resources/fonts/{fontstack}/{range}.pbf`
+								// 	: newStyle.glyphs,
+								glyphs,
 							};
 						},
 						diff: false,

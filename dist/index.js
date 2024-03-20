@@ -18,6 +18,7 @@ export class MaplibreStyleSwitcherControl {
             const { type, name } = targetProps;
             const arcGIS = type === 'arcgis';
             const ortho = type === 'ortho';
+            const glyphs = this.options?.glyphsUrl;
             map.once('styledata', () => {
                 this.currentStyleName = name;
                 res();
@@ -64,9 +65,7 @@ export class MaplibreStyleSwitcherControl {
                             sprite: arcGIS
                                 ? `${uri}/resources/sprites/sprite`
                                 : newStyle.sprite,
-                            glyphs: arcGIS
-                                ? `${uri}/resources/fonts/{fontstack}/{range}.pbf`
-                                : newStyle.glyphs,
+                            glyphs,
                         };
                     },
                     diff: false,

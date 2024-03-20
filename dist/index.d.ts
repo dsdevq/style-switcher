@@ -39,6 +39,7 @@ export type MaplibreStyleDefinition = {
 };
 export type MaplibreStyleSwitcherOptions = Partial<{
     defaultStyle: string;
+    glyphsUrl: string;
     displayMode: DisplayMode;
     transformStyle: boolean;
     showTitle: boolean;
